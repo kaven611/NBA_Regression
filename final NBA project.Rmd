@@ -1,0 +1,1047 @@
+---
+title: "What Wins NBA Games?"
+author: "Kaven Rempel"
+date: "3/24/2022"
+output: html_document
+---
+
+### **Objective**
+The main purpose of this study will be to use multiple linear regression to determine which stats win ball games. Once determined, we will be able to prove or disprove any of the many historical hypotheses or claims. For example, many claim that defensive stats win games, this is an older theory. Counter to that, in the modern basketball era, many believe that 3-point shooting is most important in winning games. This study will test both of these as well as any other possible stat that may have an influence on wins. Further, this study will determine what franchise owners should look for when building a team.
+
+### Data Set
+This data set includes 448 observations, translating to 15 seasons (two 29 team seasons and 13 30 team seasons). These seasons are consecutive starting with the 2002-2003 season up to the 2016-2017 season. This data set includes 13 variables. 12 of which are numerical and one is categorical which is season.
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(dev="png",
+                      echo = FALSE,
+                      cache = TRUE,
+                      message = FALSE,
+                      warning = FALSE)
+```
+
+
+```{r,include=FALSE}
+library(tidyverse) # for ggplot2 and dplyr and others! 
+library(lubridate) # for converting date variables
+library(patchwork) # for plotting multiple plots
+library(GGally) # for plotting correlations (ggpairs)
+library(ggcorrplot) # for plotting correlations
+library(broom) # for converting model objects to data frames
+library(knitr) # for creating tables
+library(pixiedust) # for creating tables with sprinkle (customizations)
+library(kableExtra) # for creating tables with customizations
+library(scatterplot3d) # for 3D scatterplot
+library(ggplot2) # for plots in ggplot
+library(caTools) # for splitting data into test/train
+library(dplyr)
+
+setwd("C:/Users/kaven/OneDrive/Documents/King's course work/ADS 3864B/RLabs")
+
+nbadata <- read.csv("finalnba.csv")
+
+nbadata$Season <- as.factor(nbadata$Season)
+```
+
+```{r,include=FALSE}
+nbadata.sub <- subset(nbadata, select = c(Season, W, FG., X3P., X2P., FT.,
+                                       ORB, DRB, AST, STL, BLK, TOV, PF)) 
+
+nba.quants <- subset(nbadata.sub, select = -Season)
+
+median.vect <- c(median(nba.quants$W),median(nba.quants$FG.),
+                 median(nba.quants$X3P.),median(nba.quants$X2P.),
+                 median(nba.quants$FT.),median(nba.quants$ORB),
+                 median(nba.quants$DRB),median(nba.quants$AST),
+                 median(nba.quants$STL),median(nba.quants$BLK),
+                 median(nba.quants$TOV),median(nba.quants$PF))
+
+mean.vect <- c(mean(nba.quants$W),mean(nba.quants$FG.),mean(nba.quants$X3P.),
+             mean(nba.quants$X2P.),mean(nba.quants$FT.),mean(nba.quants$ORB),
+             mean(nba.quants$DRB),mean(nba.quants$AST),mean(nba.quants$STL),
+             mean(nba.quants$BLK),mean(nba.quants$TOV),mean(nba.quants$PF))
+
+min.vect <- c(min(nba.quants$W),min(nba.quants$FG.),min(nba.quants$X3P.),
+             min(nba.quants$X2P.),min(nba.quants$FT.),min(nba.quants$ORB),
+             min(nba.quants$DRB),min(nba.quants$AST),min(nba.quants$STL),
+             min(nba.quants$BLK),min(nba.quants$TOV),min(nba.quants$PF))
+
+max.vect <- c(max(nba.quants$W),max(nba.quants$FG.),max(nba.quants$X3P.),
+             max(nba.quants$X2P.),max(nba.quants$FT.),max(nba.quants$ORB),
+             max(nba.quants$DRB),max(nba.quants$AST),max(nba.quants$STL),
+             max(nba.quants$BLK),max(nba.quants$TOV),max(nba.quants$PF))
+
+sd.vect <- c(sd(nba.quants$W),sd(nba.quants$FG.),sd(nba.quants$X3P.),
+             sd(nba.quants$X2P.),sd(nba.quants$FT.),sd(nba.quants$ORB),
+             sd(nba.quants$DRB),sd(nba.quants$AST),sd(nba.quants$STL),
+             sd(nba.quants$BLK),sd(nba.quants$TOV),sd(nba.quants$PF))
+
+rowname.v <- c("Min", "Mean","Median","Max", "STDEV")
+
+nba.summ <- as.data.frame(rbind(min.vect,mean.vect,
+                                median.vect,max.vect,sd.vect))
+
+name.nba.summ <-cbind(rowname.v,nba.summ)
+
+```
+### **Exploratory Data Analysis (EDA)**
+
+```{r}
+dust(name.nba.summ)%>% sprinkle(cols = 1:13, round=3)%>%
+  sprinkle_colnames(rowname.v="Summary Statistic",
+                    V1="Wins",V2= "FG %",V3= "3-pt %",V4= "2-pt %", 
+                    V5="Free Throw %", V6="Offensive Rebounds", 
+                    V7="Deffensive Rebounds",V8= "Assists",
+                    V9="Steals",V10= "Blocks",V11="Turnovers", 
+                    V12="Personal Fouls") %>%
+  kable()%>%kable_styling()
+
+```
+
+```{r,include=FALSE}
+gsw <- c("#FDB927","white","#006BB6")
+```
+
+
+##### Wins
+The variable wins is a quantitative variable of integer type. This is the number of wins by a team in a season. We can see from the histogram below that its distribution is relatively normal and the highest frequency is centered around its corresponding mean of 40.451. The maximum amount of wins a team can have is 82 as that is how many games there are in a season. However, we can see that the max in this data set is 73. We can see from the histogram that very few teams win more than 60 games in a season let alone more than  70.
+```{r}
+hist(nbadata$W,xlab = "Total wins per Team", main = "Histogram of Wins",col = "#006BB6")
+```
+
+
+##### Field Goal Percentage
+The variable field goal % is a quantitative variable. This is the percentage of all shots from the field made by a team. Each observation is a per game average for a particular team over a season. We can see from the histogram below that the distribution is relatively normal and centered around its mean of 45.3%. With a relatively small standard deviation of 1.6%. We can see that no team shoots below 40% from the field and very few teams shoot above 50%.
+
+```{r}
+hist(nbadata$FG.,xlab = "Avg FG proportion per Team",main = "Histogram of FG %", col = "#FDB927")
+```
+
+
+##### 3 Point Percentage
+The variable 3-pt % is a quantitative variable. This is the percentage of all shots from the 3 point range made by a team. Each observation is a per game average for a particular team over a season. We can see from the histogram below that the distribution is relatively normal with a few outliers. Most of the distribution is centered around its mean of 35.4%. We can see that there are very few outliers shooting below 30% from 3 point range. It will be interesting to see if this variable is proven to be a significant predictor of wins and therefore if these outliers with low 3-pt shooting % correspondingly have fewer wins. Conversely we will also see if the few outliers with 3-pt shooting % above 40% have correspondingly more wins.
+
+```{r}
+hist(nbadata$X3P.,xlab = "Avg 3P % per Team",main = "Histogram of 3-pt %", col = "#006BB6")
+```
+
+##### 2 Point Percentage
+The variable 2-pt % is a quantitative variable. This is the percentage of all shots within 2 point range made by a team. Each observation is a per game average for a particular team over a season. We can see from the histogram below that the distribution is relatively normal with a few outliers and slightly right-skewed. Most of the observations are centered around its mean of 48.3%. We can see that no teams have 2 point shooting percentages less than 43% or greater than 56%.
+```{r}
+hist(nbadata$X2P.,xlab = "Avg 2P % per Team",main = "Histogram of 2-pt %",col = "#FDB927")
+```
+
+##### Free Throw Percentage
+The variable free throw % is a quantitative variable. This is the percentage of all foul shots made by a team. Each observation is a per game average for a particular team over a season. We can see from the histogram below that the distribution is relatively normal and centered around its mean of 75.7%. We can see that no team shoots above 86% or below 66% from the foul line.
+
+```{r}
+hist(nbadata$FT.,xlab = "Avg FT % per Team",main = "Histogram of Free Throw %",col = "#006BB6")
+```
+
+##### Offensive Rebounds
+The variable offensive rebounds is a quantitative variable. This is total amount of offensive rebounds by a team per game averaged over a season. We can see from the histogram below that the distribution is relatively normal and centered around its mean of 11.16.
+
+```{r}
+hist(nbadata$ORB,xlab = "Avg ORB per Team",main = "Histogram of Offensive Rebounds",col = "#FDB927")
+```
+
+##### Defensive Rebounds
+The variable defensive rebounds is a quantitative variable. This is total amount of defensive rebounds by a team per game averaged over a season. We can see from the histogram below that the distribution is slightly right skewed. We can also see that the histogram has more bars compared to offensive rebounds. This is likely because teams average more defensive rebounds than offensive providing a larger range. This makes sense as when a team is defending they have more players crowded under the net waiting for a rebound compared to when they are on offense, players are more spread out to create shooting space.
+
+```{r}
+hist(nbadata$DRB,xlab = "Avg DRB per Team",main = "Histogram of Defensive Rebounds",col = "#006BB6")
+```
+
+##### Assists
+The variable assists is a quantitative variable. This is total amount of assists by a team per game averaged over a season. We can see from the histogram below that the distribution is right skewed, even more so than defensive rebounds. This is also confirmed from its mean of 21.569 which is slightly greater than its median of 21.35. From a qualitative view this can possibly be owed to the few amount of teams that run a "pass first" high ball movement offense. 
+
+```{r}
+hist(nbadata$AST,xlab = "Avg AST per Team",main = "Histogram of Assists",col = "#FDB927")
+```
+
+##### Steals
+The variable steals is a quantitative variable. This is total amount of steals by a team per game averaged over a season. We can see from the histogram below that the distribution is slightly right skewed with some outliers in the right tails. We can see that very few teams average more than 10 steals.   
+
+
+```{r}
+hist(nbadata$STL,xlab = "Avg STL per Team",main = "Histogram of Steals",col = "#006BB6")
+```
+
+##### Blocks
+The variable blocks is a quantitative variable. This is total amount of blocks by a team per game averaged over a season. We can see from the histogram below that the distribution is relatively normal and centered around its mean of 4.863. We can see that there are a few outliers averaging more than 7 blocks. From a qualitative view, this can be accredited to a single player who is known for frequently blocking opponents shots. Such as a player like Theo Ratliff who in the 2003-2004 season averaged 3.61 blocks. We can see in this distribution that is more than some teams.
+
+```{r}
+hist(nbadata$BLK,xlab = "Avg BLK per Team",main = "Histogram of Blocks",col = "#FDB927")
+```
+
+##### Turnovers
+The variable turnovers is a quantitative variable. This is total amount of turnovers by a team, per game, averaged over a season. We can see from the histogram below that the distribution is relatively normal and centered around its mean of 14.468. Its median of 14.5 is very close to the mean. We can see that there are very few teams that average more than 17 turnovers. One would assume that having more turnovers would lead to less of a chance of winning. I am curious to see if this variable has a negative coefficient in the regression and if it is significant.
+
+```{r}
+hist(nbadata$TOV,xlab = "Avg TOV per Team",main = "Histogram of Turnovers",col = "#006BB6")
+```
+
+##### Personal Fouls
+The variable personal fouls is a quantitative variable. This is total amount of personal fouls by a team per game averaged over a season. We can see from the histogram below that the distribution is relatively normal with only a few observations in the tails. This distribution appears to be centered around its mean of 20.993. Again, like turnovers, a high average of per game personal fouls is likely to have a negative effect on wins. 
+
+```{r}
+hist(nbadata$PF,xlab = "Avg PF per Team",main = "Histogram of Personal Fouls",col = "#FDB927")
+```
+
+### Relationships
+
+##### Wins, FG %, 2-pt %, 3-pt % and FT %
+We can see in the below four scatter plots that field goal %, 3 point % and 2 point % all show a clear positive relationship with wins. Free throw % however, doesn't show a relationship or pattern with wins.
+```{r}
+p1 <- ggplot(data = nbadata.sub, aes(FG., W))+
+  geom_point(color = "#006BB6")+
+  labs(y="Wins", x="Field Goal %")
+
+p2 <- ggplot(data = nbadata.sub, aes(X3P., W))+
+  geom_point(color = "#006BB6")+
+  labs(y="Wins", x="3-pt %")
+
+p3 <- ggplot(data = nbadata.sub, aes(X2P., W))+
+  geom_point(color = "#006BB6")+
+  labs(y="Wins", x="2-pt %")
+
+p4 <- ggplot(data = nbadata.sub, aes(FT., W))+
+  geom_point(color = "#006BB6")+
+  labs(y="Wins", x="Free Throw %")
+
+gridExtra::grid.arrange(p1,p2,p3,p4,nrow=2)
+```
+
+##### Wins, ORB, DRB, AST and STL
+
+We can see in the below four scatter plots that none of these variables show an obvious relationship with wins. There might be a small positive relationship between defensive rebounds and wins. The scatter plot for steals looks as if it was randomly generated. Assists shows a cluster close to the y-intercept. This corresponds to what we saw in its histogram, that it was right skewed. 
+
+
+```{r}
+p5 <- ggplot(data = nbadata.sub, aes(ORB, W))+
+  geom_point(color = "#FDB927")+
+  labs(y="Wins", x="Offensive Rebounds")
+
+p6 <- ggplot(data = nbadata.sub, aes(DRB, W))+
+  geom_point(color = "#FDB927")+
+  labs(y="Wins", x="Deffensive Rebounds")
+
+p7 <- ggplot(data = nbadata.sub, aes(AST, W))+
+  geom_point(color = "#FDB927")+
+  labs(y="Wins", x="Assists")
+
+p8 <- ggplot(data = nbadata.sub, aes(STL, W))+
+  geom_point(color = "#FDB927")+
+  labs(y="Wins", x="Steals")
+
+gridExtra::grid.arrange(p5,p6,p7,p8,nrow=2)
+```
+
+##### W, BLK, TOV, PF, 3-pt % and FG %
+
+We can see in the below four scatter plots a possible negative relationship between wins and turnovers. This would make sense as when a team turns over the ball they lose the opportunity to score and instead give the other team an opportunity to score. It appears that personal blocks and wins don't have much of a relationship nor do personal fouls and blocks. Last, we can see a clear positive relationship with field goal % and 3-pt %. This makes sense as a 3-pt shot is a shot from the field. The more 3 pointers you make, the more field goals you make.
+
+```{r}
+p9 <- ggplot(data = nbadata.sub, aes(BLK, W))+
+  geom_point(color = "#006BB6")+
+  labs(y="Wins", x="Blocks")
+
+p10 <- ggplot(data = nbadata.sub, aes(TOV, W))+
+  geom_point(color = "#006BB6")+
+  labs(y="Wins", x="Turnovers")
+
+p11 <- ggplot(data = nbadata.sub, aes(PF, W))+
+  geom_point(color = "#006BB6")+
+  labs(y="Wins", x="Personal Fouls")
+
+p12 <- ggplot(data = nbadata.sub, aes(X3P., FG.))+
+  geom_point(color = "#006BB6")+
+  labs(y="Field Goal %", x="3-pt %")
+
+gridExtra::grid.arrange(p9,p10,p11,p12,nrow=2)
+```
+
+##### FG %, 2-pt %, FT %, ORB and DRB
+
+We can see in the below four scatter plots an obvious positive linear relationship between field goal % and 2-pt %. This is similar to the previously discussed relationship between FG % and 3-pt %. Since a 2 point shot is also from the field and is essentially a function of field goal %. However, this relationship appears to be stronger as teams make more shots from 2 than they do from 3. Overall 2 pointers make up a larger proportion of shots than threes. Following, the other scatter plots show no clear relationships. Other than a small negative relationship between offensive rebounds and FG %. This bares some logic. If a team misses a lot of shots they will have to recover more offensive rebounds.
+
+```{r}
+p13 <- ggplot(data = nbadata.sub, aes(X2P., FG.))+
+  geom_point(color = "#FDB927")+
+  labs(y="Field Goal %", x="2-pt %")
+
+p14 <- ggplot(data = nbadata.sub, aes(FT., FG.))+
+  geom_point(color = "#FDB927")+
+  labs(y="Field Goal %", x="Free Throw %")
+
+p15 <- ggplot(data = nbadata.sub, aes(ORB, FG.))+
+  geom_point(color = "#FDB927")+
+  labs(y="Field Goal %", x="Offensive Rebounds")
+
+p16 <- ggplot(data = nbadata.sub, aes(DRB, FG.))+
+  geom_point(color = "#FDB927")+
+  labs(y="Field Goal %", x="Deffensive Rebounds")
+
+gridExtra::grid.arrange(p13,p14,p15,p16,nrow=2)
+```
+
+##### FG %, AST, STL, BLK and TOV
+
+We can see in the below four scatter plots a possible small positive relationship between FG% and AST. This makes sense as for an assist to be recorded a shot has to be made. Following that, there doesn't appear to be any possible relationship in the other 3 plots.
+
+
+```{r}
+p17 <- ggplot(data = nbadata.sub, aes(AST, FG.))+
+  geom_point(color = "#006BB6")+
+  labs(y="Field Goal %", x="Assists")
+
+p18<- ggplot(data = nbadata.sub, aes(STL, FG.))+
+  geom_point(color = "#006BB6")+
+  labs(y="Field Goal %", x="Steals")
+
+p19 <- ggplot(data = nbadata.sub, aes(BLK, FG.))+
+  geom_point(color = "#006BB6")+
+  labs(y="Field Goal %", x="Blocks")
+
+p20 <- ggplot(data = nbadata.sub, aes(TOV, FG.))+
+  geom_point(color = "#006BB6")+
+  labs(y="Field Goal %", x="Turnovers")
+
+gridExtra::grid.arrange(p17,p18,p19,p20,nrow=2)
+```
+
+##### FG %, PF, 3-pt %, 2-pt %, FT % and ORB
+
+We can see in the below four scatter plots a positive relationship between 3-pt % and 2-pt %. This makes sense as if a team has good shooters especially from 3 they will likely be good shooters from 2 as well. We see a negative relationship between offensive rebounds and 3-pt %. The logic here is the same as for 2-pt% and offensive rebounds. If a team misses from 3 point range this gives them an opportunity for an offensive rebound.
+
+```{r}
+p21 <- ggplot(data = nbadata.sub, aes(PF, FG.))+
+  geom_point(color = "#FDB927")+
+  labs(y="Field Goal %", x="Personal Fouls")
+
+p22 <- ggplot(data = nbadata.sub, aes(X2P., X3P.))+
+  geom_point(color = "#FDB927")+
+  labs(y="3-pt %", x="2-pt %")
+
+p23 <- ggplot(data = nbadata.sub, aes(FT., X3P.))+
+  geom_point(color = "#FDB927")+
+  labs(y="3-pt %", x="Free Throw %")
+
+p24 <- ggplot(data = nbadata.sub, aes(ORB, X3P.))+
+  geom_point(color = "#FDB927")+
+  labs(y="3-pt %", x="Offensive Rebounds")
+
+gridExtra::grid.arrange(p21,p22,p23,p24,nrow=2)
+```
+
+##### 3-pt %, DRB, AST, STL and BLK
+
+In the below four scatter plots, there isn't much of a visible relationship between any of these variables shown. The points look random.
+
+```{r}
+p25 <-ggplot(data = nbadata.sub, aes(DRB, X3P.))+
+  geom_point(color = "#006BB6")+
+  labs(y="3-pt %", x="Deffensive Rebounds")
+
+p26 <- ggplot(data = nbadata.sub, aes(AST, X3P.))+
+  geom_point(color = "#006BB6")+
+  labs(y="3-pt %", x="Assists")
+
+p27 <- ggplot(data = nbadata.sub, aes(STL, X3P.))+
+  geom_point(color = "#006BB6")+
+  labs(y="3-pt %", x="Steals")
+
+p28 <- ggplot(data = nbadata.sub, aes(BLK, X3P.))+
+  geom_point(color = "#006BB6")+
+  labs(y="3-pt %", x="Blocks")
+
+gridExtra::grid.arrange(p25,p26,p27,p28,nrow=2)
+```
+
+##### 3-pt %, TOV, PF, 2-pt %, FT % and ORB
+
+We can see in the below four scatter plots a negative relationship between 2-pt % and offensive rebounds. The logic here is the same as with 3-pt % and ORB. The more shots that are missed leads to more chances of offensive rebounds. The other three plots show no apparent relationship.
+
+```{r}
+p29 <- ggplot(data = nbadata.sub, aes(TOV, X3P.))+
+  geom_point(color = "#FDB927")+
+  labs(y="3-pt %", x="Turnovers")
+
+p30 <- ggplot(data = nbadata.sub, aes(PF, X3P.))+
+  geom_point(color = "#FDB927")+
+  labs(y="3-pt %", x="Personal Fouls")
+
+p31 <-ggplot(data = nbadata.sub, aes(FT., X2P.))+
+  geom_point(color = "#FDB927")+
+  labs(y="2-pt %", x="Free Throw %")
+
+p32 <-ggplot(data = nbadata.sub, aes(ORB, X2P.))+
+  geom_point(color = "#FDB927")+
+  labs(y="2-pt %", x="Offensive Rebounds")
+
+gridExtra::grid.arrange(p29,p30,p31,p32,nrow=2)
+```
+
+##### 3-pt %, TOV, PF, 2-pt %, FT % and ORB
+
+We can see in the below four scatter plots a positive relationship between 2-pt % and assists.The logic here is similar to the relationship between FG % and assists. An assist can only be recorded if a shot is made.
+
+```{r}
+p33 <- ggplot(data = nbadata.sub, aes(DRB, X2P.))+
+  geom_point(color = "#006BB6")+
+  labs(y="2-pt %", x="Deffensive Rebounds")
+
+p34 <-ggplot(data = nbadata.sub, aes(AST, X2P.))+
+  geom_point(color = "#006BB6")+
+  labs(y="2-pt %", x="Assists")
+
+p35 <- ggplot(data = nbadata.sub, aes(STL, X2P.))+
+  geom_point(color = "#006BB6")+
+  labs(y="2-pt %", x="Steals")
+
+p36 <- ggplot(data = nbadata.sub, aes(BLK, X2P.))+
+  geom_point(color = "#006BB6")+
+  labs(y="2-pt %", x="Blocks")
+
+gridExtra::grid.arrange(p33,p34,p35,p36,nrow=2)
+```
+
+
+##### 2-pt %, TOV, PF, FT %, ORB and DRB
+
+In four scatter plots below we can see a weak negative relationship between free throw % and offensive rebounds. It makes sense that their is some sort of negative relationship because more missed free throws leads to more offensive rebound opportunities. However, this relationship is weaker than previously stated relationships with FT % such as 2-pt % because their are less free throws in a game, less missed ones as it is a high probability shot and their is only rebound opportunity after the last free throw in a set. For example, if a player gets two free throws and misses both the players can only rebound after the second. The other three plots show no apparent relationship.
+
+```{r}
+p37 <- ggplot(data = nbadata.sub, aes(TOV, X2P.))+
+  geom_point(color = "#FDB927")+
+  labs(y="2-pt %", x="Turnovers")
+
+p38 <- ggplot(data = nbadata.sub, aes(PF, X2P.))+
+  geom_point(color = "#FDB927")+
+  labs(y="2-pt %", x="Personal Fouls")
+
+p39 <- ggplot(data = nbadata.sub, aes(ORB, FT.))+
+  geom_point(color = "#FDB927")+
+  labs(y="Free Throw %", x="Offensive Rebounds")
+
+p40 <- ggplot(data = nbadata.sub, aes(DRB, FT.))+
+  geom_point(color = "#FDB927")+
+  labs(y="Free Throw %", x="Deffensive Rebounds")
+
+gridExtra::grid.arrange(p37,p38,p39,p40,nrow=2)
+```
+
+##### FT %, AST, BLK and TOV
+In the four plots below there doesn't appear to be any obvious relationships between any of the variables.
+
+```{r}
+p41 <- ggplot(data = nbadata.sub, aes(AST, FT.))+
+  geom_point(color = "#006BB6")+
+  labs(y="Free Throw %", x="Assists")
+
+p42 <-ggplot(data = nbadata.sub, aes(STL, FT.))+
+  geom_point(color = "#006BB6")+
+  labs(y="Free Throw %", x="Steals")
+
+p43 <- ggplot(data = nbadata.sub, aes(BLK, FT.))+
+  geom_point(color = "#006BB6")+
+  labs(y="Free Throw %", x="Blocks")
+
+p44<- ggplot(data = nbadata.sub, aes(TOV, FT.))+
+  geom_point(color = "#006BB6")+
+  labs(y="Free Throw %", x="Turnovers")
+
+gridExtra::grid.arrange(p41,p42,p43,p44,nrow=2)
+```
+
+##### FT %, PF, ORB, DRB, AST and STL
+In the four plots below there doesn't appear to be any obvious relationships between any of the variables.
+
+```{r}
+p45 <- ggplot(data = nbadata.sub, aes(PF, FT.))+
+  geom_point(color = "#FDB927")+
+  labs(y="Free Throw %", x="Personal Fouls")
+
+p46 <- ggplot(data = nbadata.sub, aes(DRB, ORB))+
+  geom_point(color = "#FDB927")+
+  labs(y="Offensive Rebounds", x="Deffensive Rebounds")
+
+p47 <- ggplot(data = nbadata.sub, aes(AST, ORB))+
+  geom_point(color = "#FDB927")+
+  labs(y="Offensive Rebounds", x="Assists")
+
+p48 <- ggplot(data = nbadata.sub, aes(STL, ORB))+
+  geom_point(color = "#FDB927")+
+  labs(y="Offensive Rebounds", x="Steals")
+
+gridExtra::grid.arrange(p45,p46,p47,p48,nrow=2)
+```
+
+##### ORB, BLK, TOV, PF, DRB and AST
+In the four scatter plots below we can see a weak positive relationship between defensive rebounds and assists. The possible logic behind this could be that a player who usually gets rebounds is often a big center or forward and does not take the ball up the court. Instead they pass it to one of the smaller guards who has better ball handling skills. This pass may lead to a basket and therefore an assist. This logic however is a stretch. The other three plots show no apparent relationship.  
+
+```{r}
+p49 <- ggplot(data = nbadata.sub, aes(BLK, ORB))+
+  geom_point(color = "#006BB6")+
+  labs(y="Offensive Rebounds", x="Blocks")
+
+p50 <- ggplot(data = nbadata.sub, aes(TOV, ORB))+
+  geom_point(color = "#006BB6")+
+  labs(y="Offensive Rebounds", x="Turnovers")
+
+p51 <-ggplot(data = nbadata.sub, aes(PF, ORB))+
+  geom_point(color = "#006BB6")+
+  labs(y="Offensive Rebounds", x="Personal Fouls")
+
+p52 <- ggplot(data = nbadata.sub, aes(AST, DRB))+
+  geom_point(color = "#006BB6")+
+  labs(y="Deffensive Rebounds", x="Assists")
+
+gridExtra::grid.arrange(p49,p50,p51,p52,nrow=2)
+```
+
+##### DRB, STL, BLK, TOV and PF
+
+In the four scatter plots below we can see a negative relationship between defensive rebounds and personal fouls. The logic on this relationship is not clear. A defensive rebound is unlikely to lead to a personal foul and a personal foul cannot lead to a defensive rebound.
+
+```{r}
+p53 <- ggplot(data = nbadata.sub, aes(STL, DRB))+
+  geom_point(color = "#FDB927")+
+  labs(y="Deffensive Rebounds", x="Steals")
+
+p54 <- ggplot(data = nbadata.sub, aes(BLK, DRB))+
+  geom_point(color = "#FDB927")+
+  labs(y="Deffensive Rebounds", x="Blocks")
+
+p55 <- ggplot(data = nbadata.sub, aes(TOV, DRB))+
+  geom_point(color = "#FDB927")+
+  labs(y="Deffensive Rebounds", x="Turnovers")
+
+p56 <- ggplot(data = nbadata.sub, aes(PF, DRB))+
+  geom_point(color = "#FDB927")+
+  labs(y="Deffensive Rebounds", x="Personal Fouls")
+
+gridExtra::grid.arrange(p53,p54,p55,p56,nrow=2)
+```
+
+##### AST, STL, BLK, TOV and PF
+
+In the four scatter plots below we see there is no clear relationship between any of the variables. This makes sense for all pairings below. For example, we would not expect assists and steals to be related. A team that gets a lot of assists does not translate to a lot of steals in any way.
+
+```{r}
+p57 <- ggplot(data = nbadata.sub, aes(STL, AST))+
+  geom_point(color = "#006BB6")+
+  labs(y="Assists", x="Steals")
+
+p58 <- ggplot(data = nbadata.sub, aes(BLK, AST))+
+  geom_point(color = "#006BB6")+
+  labs(y="Assists", x="Blocks")
+
+p59 <- ggplot(data = nbadata.sub, aes(TOV, AST))+
+  geom_point(color = "#006BB6")+
+  labs(y="Assists", x="Turnovers")
+
+p60 <- ggplot(data = nbadata.sub, aes(PF, AST))+
+  geom_point(color = "#006BB6")+
+  labs(y="Assists", x="Personal Fouls")
+
+gridExtra::grid.arrange(p57,p58,p59,p60,nrow=2)
+```
+
+##### STL, BLK, TOV and PF
+
+In the four scatter plots below there doesn't appear to be any apparent relationships between the variables.
+
+```{r}
+p61 <- ggplot(data = nbadata.sub, aes(BLK, STL))+
+  geom_point(color = "#FDB927")+
+  labs(y="Steals", x="Blocks")
+
+p62 <- ggplot(data = nbadata.sub, aes(TOV, STL))+
+  geom_point(color = "#FDB927")+
+  labs(y="Steals", x="Turnovers")
+
+p63 <- ggplot(data = nbadata.sub, aes(PF, STL))+
+  geom_point(color = "#FDB927")+
+  labs(y="Steals", x="Personal Fouls")
+
+p64 <- ggplot(data = nbadata.sub, aes(TOV, BLK))+
+  geom_point(color = "#FDB927")+
+  labs(y="Blocks", x="Turnovers")
+
+gridExtra::grid.arrange(p61,p62,p63,p64,nrow=2)
+```
+
+##### BLK, TOV and PF
+
+In the two scatter plots below we see a positive relationship between personal fouls and turnovers. This makes sense because it is common for a turnover to lead to a personal foul. For example, if a player on offense loses the ball to the other team by making a bad pass, this will lead to a breakaway for the team who intercepted the pass.On the chase down it is very common for the player who lost the ball to want to redeem there turnover by making a stop but often instead of a clean block this leads to a foul. On the other hand blocks and personal fouls should be completely unrelated. On a defensive play it can only be one or the other. The resulting scatter plot shows evidence of this. 
+
+```{r}
+p65 <- ggplot(data = nbadata.sub, aes(PF, BLK))+
+  geom_point(color = "#006BB6")+
+  labs(y="Blocks", x="Personal Fouls")
+
+p66 <- ggplot(data = nbadata.sub, aes(TOV, PF))+
+  geom_point(color = "#006BB6")+
+  labs(y="Personal Fouls", x="Turnovers")
+
+gridExtra::grid.arrange(p65,p66,nrow=2,ncol=2)
+```
+
+### Correlations
+Below is a correlogram of all the quantitative variables in the data set. We can see that these correlations correspond to the relationships we noticed in the previous scatter plots. Notably, we can confirm the strong positive and negative relationships. For example, the strongest relationship in the data is between field goal % and 2-pt %, proven by its correlation of 0.88. The logic here is the same as previously mentioned. 2 point % is a proportion of field goal %. With this obvious relationship it would be logical to only include one of these two variables in the regression model to avoid multicollinearity. Further, the same is proven with FG % and 3-pt % as their correlation is 0.56. Next we can see several variables are positively correlated with wins with a correlation greater than or equal 0.5. Such as, FG %, 2-pt % and 3-pt %, these variables all bare the same logic in their support for wins. More shots made leads to more victories.
+
+Conversely, there are some notable negative correlations. Though not greater than 0.5, we can see a negative correlation of -0.49 between offensive rebounds and 2-pt%. The logic behind this corresponds to the logic explaining the scatter plot pattern. More missed shots lead to offensive rebound opportunities. Another negative correlation to note is between turnovers and wins. This correlation of -0.36 is surprisingly high. I would assume that turnovers would have a stronger negative relationship with wins. Since a turnover not only often leads to a basket for the opposing team, it leads to a loss of scoring opportunity for the team who had the turnover. It will be interesting to see if this variable is significant in the regression.
+
+```{r}
+correl <- cor(nba.quants)
+
+ggcorrplot(correl,type = "upper", 
+           outline.color = "white",
+           colors = c("#FDB927","white","#006BB6"),
+           lab = TRUE)+
+  theme_gray()+labs(x=NULL,y=NULL, title = "Correlogram")+
+  theme(plot.title = element_text(hjust = 0.5),)
+
+
+```
+
+### 3 Point Era
+
+Many people believe that once the 3-point era began, 3-point shooting has dominated the game and defense has been less important. The 3-point era does not have a set-in stone beginning. Nevertheless, many people believe Steph Curry fostered in the heavy 3-pt shooting around 2013. Evidence of this theory is shown in the below plot of 3-pt attempts over 15 seasons. It is clear that 3 point attempts across all teams increased after the 2010-2011 season and continued to increase every season after. To compare, the team with the lowest amount of 3-pt attempts in 2016-2017 is still higher than all the teams except one in the 2002-2003 season.
+
+
+```{r}
+ggplot(data = nbadata, aes(x=Season,y=X3PA,fill=Season))+
+  geom_point(color="#CF5300")+
+  geom_boxplot()+
+  labs(y="3-pt Attempts",title = "3-pt Attempts Over 15 Seasons")+
+  theme_minimal()+
+  theme(axis.text.x.bottom = element_text(angle = 30,vjust = 0.8),
+      plot.title = element_text(hjust = 0.5),legend.position = "none")
+```
+
+### Decline in 2-point Attempts
+Opposite to 3-pt attempts we observe in the plot below, 2-pt attempts appear to decrease slightly from the 2012-2013 season onward. Clearly the style of play has changed over the years. Teams in more recent years are shooting less 2 pointers and more 3 pointers. With this evidence, it will be interesting to see when building a regression model, if either of these predictors are significant. Further, assuming both are significant predictors, comparing models that include just one will be of interest.
+
+
+```{r}
+ggplot(data = nbadata, aes(x=Season,y=X2PA,fill=Season))+
+  geom_point(color="#CF5300")+
+  geom_boxplot()+
+  labs(y="2-pt Attempts",title = "2-pt Attempts Over 15 Seasons")+
+  theme_minimal()+
+  theme(axis.text.x.bottom = element_text(angle = 30,vjust = 0.8),
+      plot.title = element_text(hjust = 0.5),legend.position = "none")
+```
+
+### Defense Hypothesis
+Many people support the belief that with an increase in 3-pt shots and therefore an increase in more efficient shooting players, defense has consequently been less important. However, in the plot below there is no apparent decrease in blocks over the years. The median stays close to 5 blocks across all 15 seasons
+
+```{r}
+ggplot(data = nbadata, aes(x=Season,y=BLK,fill=Season))+
+  geom_point(color="#CF5300")+
+  geom_boxplot()+
+  labs(y="Blocks",title = "Blocks Over 15 Seasons")+
+  theme_minimal()+
+  theme(axis.text.x.bottom = element_text(angle = 30,vjust = 0.8),
+      plot.title = element_text(hjust = 0.5),legend.position = "none")
+```
+
+### Steals
+Continuing with the defense hypothesis. We again see no obvious pattern with steals.
+```{r}
+ggplot(data = nbadata, aes(x=Season,y=STL,fill=Season))+
+  geom_point(color="#CF5300")+
+  geom_boxplot()+
+  labs(y="Steals",title = "Steals Over 15 Seasons")+
+  theme_minimal()+
+  theme(axis.text.x.bottom = element_text(angle = 30,vjust = 0.8),
+      plot.title = element_text(hjust = 0.5),legend.position = "none")
+```
+
+### **Methodology**
+To make predictions of the dependent variable using our model the data will be split into train and test sets. The train set will be  310 observations, leaving the test set to be 138 observations. This provides a good ratio of approximately 70% to 30% train to test. The train and test sets are in no particular order, ie. they are not ordered by season. They are randomized, because this will not be treated as a time series model. Thus, none of the models will include the categorical variable for Season. This is because the variable doesn't make sense in predicting wins. The objective of this study in a hands on sense is to see if team general managers (GM) should form teams based off a certain focus of the game such as shooting or defense. A GM cannot control what season it is. Even in a theory sense if one was interested in seeing the effects from past seasons, this still doesn't make sense. The interpretation of the coefficient would be as follows: playing in season 'xyz' accounts for an increase of 'x' wins compared to playing in season 'abc'. There is still 30 teams (or 29 in from 2002-2004) playing 82 games. How can one season account for more wins than another? All of the teams can't win more without some teams losing more. Therefore, season will not included in the model. Season was only included in the data to show evolution of stats across seasons in the EDA section.
+
+The methods used will be multiple linear regression. It is likely that the variables behave linearly, however if signs of non-linearity exist the variables can be transformed. In all models the dependent variable will be wins and multiple models including different combinations of independent variables will be fit. Potential independent variables to select from are: field goal % (FG.), 3-pt % (X3P.), 2-pt % (X2P.), free throw % (FT.), offensive rebounds (ORB), defensive rebounds (DRB), assists (AST), blocks (BLK), steals (STL), turnovers (TOV), and personal fouls (PF).
+
+```{r, include=FALSE}
+set.seed(50)
+sample1 <- sample.split(nbadata.sub, SplitRatio = 0.75)
+train1 <- subset(nbadata.sub, sample1 == TRUE)
+test1 <- subset(nbadata.sub, sample1 == FALSE)
+
+fit1 <- lm(W ~  FG. + X3P.+ X2P. + FT. + ORB + DRB + AST +
+             BLK + STL + TOV + PF, data = train1)
+
+summary(fit1)
+```
+
+
+### Fit 1
+We can see in the output below from the multiple linear regression that several variables have p-values <0.001 indicating their corresponding coefficients are different from 0 and therefore statistically significant. Conversely some variables appear to have high p-values which would indicate that they are insignificant predictors of wins. Just because a coefficient has a high p-value doesn't indicate that we should instantly remove them from the model. These p-values can be falsely high because of collinearity among variables. For example, we can see that the coefficient for 2-pt % has a very high p-value of 0.64. At first glance this may appear that the coefficient is insignificant and should be removed. However, as we saw earlier in the exploratory data analysis this variable is strongly correlated with field goal %. For this reason, it may be more logical to remove FG % and examine the corresponding change in the p-value of 2-pt %. It is more logical to remove FG % instead of 2-pt % since FG % is also highly correlated with 3-pt%.
+
+Next we can see that the p-value for free throw % is very high greater than any common cutoff level of significance. This variable doesn't have any notable relationship with any other variable. Therefore, decreasing the possibility of collinearity. Conclusively, it is then logical to remove it from future models.
+
+Next we can see that the p-value for assists is relatively high. However,
+removing field goal % may also have effects on the significance of the assists coefficient. Since we again know from the EDA that the two have a positive relationship. Therefore, we will not remove assists in the next model and evaluate its changes.
+
+Lastly, the p-value for personal fouls is relatively high. This variable doesn't have any notable relationship with any other variable. Therefore, decreasing the possibility of collinearity. Conclusively, it is then logical to remove it from future models.
+
+```{r}
+dust(fit1) %>% sprinkle(col=2:4, round=3) %>%
+  sprinkle(co=5, fn=quote(pvalString(value))) %>%
+  sprinkle_colnames(term="Term", estimate="Estimate",
+                    std.error="SE", statistic="T-statistic",
+                    p.value="P-value") %>%
+  kable() %>% kable_styling()
+```
+
+
+```{r,include=FALSE}
+fit2 <- lm(W ~  X2P. + X3P. + ORB + DRB  + AST+
+             BLK + STL + TOV, data = train1)
+# remove FG., FT., and PF
+
+summary(fit2)
+```
+
+### Fit 2
+We can now see in the regression output below, both the p-value and coefficient for 2-pt % have changed. After removing field goal % we can see that the corresponding result is a significant p-value <0.001 for 2-pt % and an increased coefficient estimate. This result proves my previous hypothesis that the p-value was falsely large because of the collinearity between FG % and 2-pt %.
+
+In this model we can see only the coefficient for assists has a p-value beyond any common cutoff point for significance. Before removing assists from the model, we recall that assists and 2-pt % have a correlation of 0.5. Though, it is likely that removing 2-pt% may lead to a worse fit model. It is worth attempting two different models. One that includes assists and excludes 2-pt %, and one that excludes assists and includes 2-pt %. We can then compare the models by using overall measures of fit such as AIC, CV or adjusted R-squared. 
+
+```{r}
+dust(fit2) %>% sprinkle(col=2:4, round=3) %>%
+  sprinkle(co=5, fn=quote(pvalString(value))) %>%
+  sprinkle_colnames(term="Term", estimate="Estimate",
+                    std.error="SE", statistic="T-statistic",
+                    p.value="P-value") %>%
+  kable() %>% kable_styling()
+```
+
+
+```{r,include=FALSE}
+fit3 <- lm(W ~ X3P. + ORB + DRB + AST +
+             BLK + STL + TOV, data = train1)
+
+# remove X2P.
+
+summary(fit3)
+```
+
+### Fit 3
+We can see in the model below, removing 2 point % did not lead to a lower p-value for assists. The coefficient for assists did correspondingly change from negative to positive which makes more sense based on the purpose assists serve in the game. This large change in the coefficient and p-value proves the relationship between 2-pt % and assists. However, the p-value for assists is still beyond any common significance level and it is therefore logical to remove it. 
+
+We also notice the change in p-value and coefficient for offensive rebounds. The p-value has increased from <0.001 to 0.043. Though it is still lower than 0.05 (a common significance level), its corresponding change represents the relationship it has with 2-pt %. Furthermore, the coefficient has been cut in half. As we noted in the EDA these two variables have a -0.49 correlation. This could be reason to remove offensive rebounds in any future models since part of the predictive power from 2-pt % is caught in the coefficient of offensive rebounds. Again, removing this variable may not necessarily improve the overall fit of the model. It should be assessed by comparing model fit measures such as AIC in models that include offensive rebounds versus ones that don't.
+```{r}
+dust(fit3) %>% sprinkle(col=2:4, round=3) %>%
+  sprinkle(co=5, fn=quote(pvalString(value))) %>%
+  sprinkle_colnames(term="Term", estimate="Estimate",
+                    std.error="SE", statistic="T-statistic",
+                    p.value="P-value") %>%
+  kable() %>% kable_styling()
+```
+
+```{r,include=FALSE}
+fit4 <- lm(W ~ X3P. + X2P. + DRB  +
+             BLK + STL + TOV, data = train1)
+
+# remove AST, ORB and add back X2P.
+
+summary(fit4)
+```
+
+### Fit 4
+We can see in the model output below that there are no coefficients with p-values greater than 0.01. This does not mean that this is the best model. We still need to compare model fit measurements.
+```{r}
+dust(fit4) %>% sprinkle(col=2:4, round=3) %>%
+  sprinkle(co=5, fn=quote(pvalString(value))) %>%
+  sprinkle_colnames(term="Term", estimate="Estimate",
+                    std.error="SE", statistic="T-statistic",
+                    p.value="P-value") %>%
+  kable() %>% kable_styling()
+```
+
+### Model Comparison
+We can see from the AIC values below that the first model (we can tell by the degrees of freedom) has the lowest AIC and therefore the best fit. Even though some of the variables were deemed insignificant by their p-values, their inclusion in the model still adds predictive value. With this evidence it may be possible to further improve the model fit. The inclusion of more variables improved the models fit. However, the question is, were all variables to blame for this added significance or was it some of the more significant variables. For example,  we notice that in the first model field goal % had a low p-value but it was strongly correlated with 2-pt %, obviously we can only include one of these two variables. We never saw the impact of including FG % but removing 2-pt %. Lets check the AIC of a new model which excludes 2-pt % and includes field goal %. Further, as we know AIC is increased by adding too many parameters. Therefore, penalizing the model for over complicating and over fitting. To attempt at a lower AIC, lets also remove free throw percentage. We saw in previous models this coefficient had a very high p-value. Additionally, we saw in the EDA that it has no relationship with wins. 
+
+
+```{r}
+AIC1 <- as.data.frame(AIC(fit1, fit2, fit3, fit4))
+
+dust(AIC1) %>%sprinkle(col=2, round=3) %>%
+  sprinkle_colnames(df="Degrees of Freedom")%>%
+  kable() %>% kable_styling()
+
+```
+
+
+```{r,include=FALSE}
+fit5 <- lm(W ~ FG. + X3P. + ORB + DRB + AST +
+             BLK + STL + TOV + PF, data = train1)
+
+AIC(fit5)
+summary(fit5)
+
+all <- lm(W ~ ., data = train1)
+backward <- step(all, direction = "backward", trace = TRUE )
+AIC(backward)
+
+yint <- lm(W ~ 1, data = train1)
+forward <- step(yint, scope = formula(yint), direction = "forward", trace = TRUE)
+AIC(forward)
+
+both <- step(all, scope = formula(all), direction = "both", trace = TRUE)
+AIC(both)
+
+```
+
+### Fit 5
+We can see in the output below that all the coefficients are significant aside from assists and personal fouls. Though, these two variables have p-values beyond the 0.10 significance level it is evident from the AIC values below that this is the best fit model. For example, fit 4 excludes these two variables and we can see that it has a higher AIC and therefore a worse fit. Additionally, we can see that removing both 2-pt % and free throw % results in a lower AIC. Conclusively, based on the AIC measure, fit 5 is the best fit model.
+
+```{r}
+dust(fit5) %>% sprinkle(col=2:4, round=3) %>%
+  sprinkle(co=5, fn=quote(pvalString(value))) %>%
+  sprinkle_colnames(term="Term", estimate="Estimate",
+                    std.error="SE", statistic="T-statistic",
+                    p.value="P-value") %>%
+  kable() %>% kable_styling()
+
+fitnames <- c("Fit 1", "Fit 2","Fit 3","Fit 4", "Fit 5")
+AIC2 <- as.data.frame(AIC(fit1,fit2,fit3,fit4,fit5))
+
+nmedAIC2 <- cbind(fitnames,AIC2)
+
+dust(nmedAIC2) %>% sprinkle(col=3, round=3) %>%
+  sprinkle_colnames(df="Degrees of Freedom",fitnames="Model") %>%
+  kable() %>% kable_styling()
+
+```
+
+### Interpretation
+With the final model chosen, we can interpret the coefficients from the output above. All coefficients are expressed as a function of wins. First we have the y-intercept of -230.531. This figure is not of much interest as this would be the hypothetical number of wins if all predictor coefficient values are zero. Of course in an NBA game these values would almost impossibly be zero.
+
+Next we have the coefficient for field goal % of 321.298. This positive coefficient indicates a positive relationship with the dependent variable. This makes logical sense as if a teams shooting percentage increases, we would expect them to win more games. Since the x observations are expressed as proportions (ie. 0.75 = 75%) this coefficient is correspondingly high. This means that for a 0.01 increase in field goal % we predict an increase of 0.01 * 321.298 = 3.213 wins. 
+
+Next we have the coefficient for 3-pt % of 165.144. This coefficient is positive indicating a positive influence on wins. Again, this makes sense as if a team shoots better from three we would expect them to win more. The interpretation is the same as for FG %. Therefore, for a 0.01 increase in 3-pt% we predict an increase of 0.01 * 165.144 = 1.651 wins. 
+
+Next we have the coefficient for offensive rebounds 1.827. This coefficient is positive indicating a positive influence on wins. The sign of this coefficient is logical as if a team grabs more offensive rebounds, this provides another scoring opportunity and therefore a better chance of winning. The interpretation for this coefficient is straight forward. An increase of 1 rebound leads to an expected increase of 1.827 wins.
+
+Next we have the coefficient for defensive rebounds of 2. This coefficient is positive indicating a positive influence on wins. The sign of this coefficient is logical as if a team grabs more defensive rebounds, this takes away another scoring opportunity for the opposing team and therefore leads to a better chance of winning. The interpretation for this coefficient is straight forward. An increase of 1 defensive rebound leads to an expected increase of 2 wins.
+
+Next we have the coefficient for assists of -0.506. This coefficient is negative indicating a negative influence on wins. The sign of this coefficient at first does not make sense. An assist can only be recorded if a basket is made. However, a more elaborate explanation can be provided. Assists are more common before a 2-pt shot, this is clear from its 0.5 correlation with 2-pt%. Therefore, if an assist more likely to lead to a 2 pointer than it takes away from a potential 3 pointer. Therefore, this negative coefficient is representative of an opportunity cost. It can be interpreted as follows: an additional assist -0.506 less wins (ie. < 1 win).
+
+Next we have the coefficient for blocks of 2.396. This coefficient is positive indicating a positive influence on wins. The sign of this coefficient is logical as a block prevents the opponent from scoring, if the opponent scores less then you are more likely to win. This coefficient can be interpreted as 1 additional block per game predicts 2.396 more wins on the season.
+
+Next we have the coefficient for steals of 3.286. This coefficient is positive indicating a positive influence on wins. The sign of this coefficient is logical. Not only does a steal prevent the opponent from scoring it can quickly lead to a fast break and a resulting basket for your team instead. This coefficient can be interpreted as 1 additional steal per game results in an estimated increase of 3.286 wins per season. 
+
+After that the coefficient for turnovers is -3.54. This coefficient is negative and representing a negative impact on wins. This negative influence makes sense. A turnover prevents the team from scoring and gives the opposition a scoring opportunity. An increase of 1 turnover per game leads to an estimated decrease of 3.54 wins per season.
+
+Finally, we have the coefficient for personal fouls of 0.486. This coefficient is positive indicating a positive influence on our response variable. At first, like we saw in assists, this positive coefficient here does not make sense. A personal foul send the opposing player to the free throw line for foul shots. A foul often is a result of a bad block attempt where the defender makes contact with the player instead of the ball. However, this positive coefficient may be correct. If the opposite team is about to make a shot and you attempt to block but instead foul. Most of the time this still leads to a missed shot. Therefore, unless the opposing team makes both free throws, the foul prevented a basket. This coefficient can be interpreted as 1 additional foul accounts for an increase in wins of 0.486 (ie. < 1 win).
+
+The regression equation is as follows:
+$y = -230.531 + 321.298x_{1} + 165.144x_{2} + 
+1.827x_{3} + 2x_{4} - 0.506x_{5} + 
+2.396x_{6} + 3.286x_{7} - 3.54x_{8} + 
+0.486x_{9}$
+
+
+### Model Performance
+Below is a plot comparing the model predictions made using the train set with the test observations. We can see that the model makes good estimates of the response variable. Most of the points are relatively close to the 45 degree line. Additionally, there doesn't appear to be any extreme outliers, the top left and bottom right corners of the graph are empty. The line appears to go through almost the center of the points. This is evidence of a good predictive model.
+
+Further, we can examine the significance of the model from the F-test. The F-test, test the hypothesis that all of the predictive coefficients in the model are equal to zero and therefore they are all insignificant predictors of the response variable. Against the alternative that at least one predictor variable is significant in predicting the response. From the output the p-value of the F-statistic is very small and basically zero. Therefore rejecting the null and concluding that at least one variable has predictive power.
+
+
+```{r}
+predsW1 <- predict(fit5, newdata = test1, type = "response")
+
+test1[,"Predicted"] <- predsW1
+
+ggplot(test1,aes(W,Predicted))+
+  geom_point(color="#006BB6")+
+  geom_abline(intercept = 0,slope = 1)+
+  labs(x="Data (actual values)",y="Fitted (predicted values)",
+       title = "NBA Season Wins")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+```
+```{r, indlude = FALSE}
+predsW2 <- predict(backward, newdata = test1, type = "response")
+
+test1[,"Predicted_back"] <- predsW2
+
+ggplot(test1,aes(W,Predicted_back))+
+  geom_point(color="#006BB6")+
+  geom_abline(intercept = 0,slope = 1)+
+  labs(x="Data (actual values)",y="Fitted (predicted values)",
+       title = "NBA Season Wins")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+test1$MAPE_back <- abs((test1$W-test1$Predicted_back)/test1$W)
+mean(test1$MAPE_back)
+
+test1$MAPE_fit5 <- abs((test1$W-test1$Predicted)/test1$W)
+mean(test1$MAPE_fit5)
+
+
+```
+
+
+### 2016-2017 Golden State Warriors Prediction
+As we have seen, the theme of the plots in this study has been a combo of gold and royal blue. Not by coincidence the colors of the Golden State warriors. If we look at the season stats for the 2016-2017 Golden State Warriors from the raw data we can see the team averaged 49.5 % field goal shooting, 38.3 % 3-pt shooting, 9.4 offensive rebounds, 35 defensive rebounds, 30.4 assists, 9.6 steals, 6.8 blocks, 14.8 turnovers and 19.3 personal fouls. We can plug these observation figures into the predictive model and receive a corresponding prediction on wins. With these values entered into the model, the model predicts 68.39 wins. The Warriors that season had 67 wins. This model prediction is very close and therefore pretty accurate. The '16-'17 Warriors were the first place team in the league and went on to win the championship. This team was known as having a heavy 3-pt shooting offense. They had the second highest 3-pt % in the league, second only to the San Antonio Spurs who shot 39.1% from 3-pt range. The San Antonio Spurs had the second most wins in the league. The Warriors however took more 3-pt attempts and therefore averaged more 3-pt shots made per game. This is a good example of how big of an impact 3-pt shooting has on wins. As discussed earlier, teams are shooting more 3's and less 2's. We can see that the regression output is consistent with the observations. The two teams with the best 3-pt shooting were correspondingly the most winning teams in the league.
+
+```{r,include=FALSE}
+# 2016-2017 warriors prediction
+predict(fit5,newdata = data.frame(FG.=0.495,X3P.=0.383,ORB=9.4,DRB=35,AST=30.4,
+                                  STL=9.6,BLK=6.8,TOV=14.8,PF=19.3),
+        type = "response") 
+
+# 1995-1996 Bulls prediction
+predict(fit5,newdata = data.frame(FG.=0.478,X3P.=0.403,ORB=15.2,DRB=29.4,AST=24.8,
+                                  STL=9.1,BLK=4.2,TOV=14.3,PF=22),
+        type = "response") 
+
+```
+
+
+### Coefficient Plot
+The plot below shows the coefficients for predictor variables as the points and their standard errors as the horizontal line going through them. This plot can be misleading as it makes it seem that variables with large coefficients have a greater impact on the response variable. However, the distance from the x-intercept needs to be interpreted relative to the x values of the variable. For example, field goal % and 3-pt % appear to be way out in front. This is because their x values are in proportion form as previously explained. Conversely, a variable like steals is in full number form. This plot is not a way of comparing impact on the response variable but instead a good visualization of which variables have a positive impact versus negative. Additionally it is a good way to visualize their standard errors.
+
+
+```{r}
+out <- tidy(fit5, conf.int = TRUE) %>%
+  filter(term!="(Intercept)")
+
+ggplot(out, aes(estimate, term))+ 
+  geom_vline(xintercept = 0,color="#CF5300")+ 
+             geom_pointrange(aes(xmin=conf.low,
+                                 xmax=conf.high))+
+  labs(x="Coeffiecient estimate", y=NULL)+
+  theme_minimal()
+```
+
+### Residual Plot
+A residual is the distance between an observation from the data the corresponding prediction. It is the prediction error. In the graph below we can see that the points are spread out and appear to be random. Further,  we see that there is no clear pattern or cone shape. From this we can conclude that the residuals are not heteroscedastic and the model behaves linearly.
+
+```{r}
+plot(fit5,which = 1)
+```
+
+### Q-Q Plot
+
+A Q-Q plot is a quantile-quantile plot comparing theoretical and empirical (standardized) quantiles of residuals. In this plot below we can see that the sample data increases at the same rate as the normal quantiles. Very few observations fall far from the diagonal line and there are no substantial outliers.
+
+```{r}
+plot(fit5, which = 2)
+```
+
+### 3D Plot
+Below we can see the 3D scatter plot showing wins, FG % and 3-pt %. Though our final model includes 10 total variables (9 predictor and 1 response), we only include three here as it is difficult to visualize more. We can see, that the results from our regression output are consistent with this plot. Both field goal % and 3-pt % have a strong positive relationship with wins. 
+
+```{r}
+p3D <- scatterplot3d(x=nbadata.sub$FG., y=nbadata.sub$X3P.,
+                     z=nbadata.sub$W, xlab = "FG %",
+                     ylab = "3-pt %", zlab = "Wins (0's)",
+                     main = "NBA wins 3D Plot",
+                     pch = 21, type = "p", color = "#006BB6",
+                     angle = 55,z.ticklabs = c(0,1,2,3,4,5,6,7,8))
+```
+
+### Residuals vs. Model Predictors
+To check for non-linearity or any other patterns we must plot the predictor variables against the residuals. If there are any patterns in the scatter plots, the variables may behave in a non-linear fashion and therefore must be transformed to a non-linear variable. We can see in the nine plots below that there are no apparent patterns between the residuals and predictor variables, the plots are randomly scattered. Therefore, we can conclude that these variables are linear and no transformation is required.
+
+```{r}
+train1[,"Residuals"] <- as.numeric(residuals(fit5))
+
+r1 <- ggplot(train1, aes(FG., Residuals))+ geom_point(color="#FDB927")
+r2 <- ggplot(train1, aes(X3P.,Residuals))+geom_point(color="#FDB927")
+r3 <- ggplot(train1, aes(ORB, Residuals)) +geom_point(color="#FDB927")
+r4 <- ggplot(train1, aes(DRB, Residuals))+geom_point(color="#FDB927")
+gridExtra::grid.arrange(r1,r2,r3,r4,nrow=2)
+
+r5 <- ggplot(train1, aes(AST, Residuals))+ geom_point(color="#006BB6")
+r6 <- ggplot(train1, aes(BLK,Residuals))+geom_point(color="#006BB6")
+r7 <- ggplot(train1, aes(STL, Residuals)) +geom_point(color="#006BB6")
+r8 <- ggplot(train1, aes(TOV, Residuals))+geom_point(color="#006BB6")
+gridExtra::grid.arrange(r5,r6,r7,r8,nrow=2)
+
+r9 <- ggplot(train1, aes(PF, Residuals))+geom_point(color="#FDB927")
+gridExtra::grid.arrange(r9,nrow=2, ncol=2)
+
+```
+
+### Residuals vs. Variables Excluded from the Model
+We must also examine any patterns or signs of non-linearity with variables not included in the model against the residuals. If we find signs of non-linearity or patterns these variables should be transformed and included in the model. We can see in the plots below the two variables excluded from the model, 2-pt % and free throw % plotted against the residuals. Fortunately, there is no apparent pattern or sign of non-linearity, these patterns are randomly scattered. Therefore, these variables can remain excluded from the predictive model.
+```{r}
+r10 <- ggplot(train1, aes(X2P., Residuals))+ geom_point(color="#006BB6")
+r11 <- ggplot(train1, aes(FT.,Residuals))+geom_point(color="#FDB927")
+gridExtra::grid.arrange(r10,r11,nrow=2,ncol=2)
+```
+
+### Residuals vs. Fitted
+We must compare the residuals with the fitted observations to determine if the model contains heteroscedasticity or not. We do not want heteroscedasticity present in the model as this means our errors do not have constant variance and must therefore be transformed. As we can see in the plot below, there is not pattern and the points appear to be randomly scattered. This means our variance is constant and we can conclude the errors are not heteroscedastic.
+
+```{r}
+# residuals against fitted
+cbind(Fitted=fitted(fit5),Residuals=residuals(fit5))%>%
+  as.data.frame() %>% ggplot(aes(Fitted,Residuals))+
+  geom_point(color="#006BB6")
+```
+
+### **Conslusion**
+To conclude, the multiple linear regression was an effective method to predict wins. We saw previously in the methodology section that nine predictor variables were selected to form the model, predicting NBA regular season wins. Of these nine variables we saw that seven were significant based off their p-values. These variables were field goal %, 3-pt %, offensive rebounds, defensive rebounds, blocks, steals and turnovers. Conversely, the two variables that had p-value's beyond common significance levels were assists and personal fouls. We concluded earlier in the methodology section that these two variables, despite having slightly high p-values, still added predictive power to the model. Further, including assists and personal fouls resulted in a lower AIC value and therefore a better fit model. 
+
+In methodology we also covered the removal of the two variables: 2-point % and free throw %. 2-pt % had a strong correlation with field goal % and the two could not be in the model together without having multicollinearity present. Free throw % was determined to be insignificant from its high p-value and did not add any additional predictive power based on the AIC measure. The qualitative logic behind free throw % not influencing wins could be that the shots you make from the line are the same as scoring on that possession or worse if you miss the free throws. For example, say a player has went for a 2-pt lay up and gets fouled, thus likely missing the shot. The player then shoots the two free throws to account for the foul. If both are made they are not in a better position in terms of the score, if they hadn't been fouled and made the original shot. If the player misses both they are worse off depending on whether they grab the offensive rebound or not. This might be a complex theory, although would explain the insignificance of free throw % predicting wins.
+
+People in the NBA community have said that the new 'meta' in basketball is the 3-pt shot. Many people say it has broken the game. Alternatively, many have said it has improved the game. As stated in the EDA, the three point era began roughly in 2013 and continues to exist as 3-pt shooting only becomes more prominent in the NBA. Though the three point shot was added to the game decades ago it has only been capitalized on in recent years. The analysis and model building done in this study have proven the importance and growing relevance of 3-pt shooting on winning basketball games. We have seen as well the importance not only of 3-pt shooting but of several other variables in predicting wins. That is the game of basketball, even if three point shooting is the new 'meta' a team still has to defend, grab rebounds, shoot two's and play the game. Therefore, there are many factors to consider when trying to win ball games. That said, 3-pt shooting is still a topic of interest and would be interesting to visualize its affect individually on wins with all other variables held constant at their respective means.
+
+
+```{r, include=FALSE}
+newdata <- tibble(X3P. = seq(0.278,0.416,0.0092),
+                  FG.=mean(nbadata.sub$FG.),ORB=mean(nbadata.sub$ORB),
+                  DRB=mean(nbadata.sub$DRB),AST=mean(nbadata.sub$AST),
+                  STL=mean(nbadata.sub$STL),BLK=mean(nbadata.sub$BLK),
+                  TOV=mean(nbadata.sub$TOV),PF=mean(nbadata.sub$PF))
+
+predicted_values <- augment(fit5, newdata = newdata,
+                            se_fit = TRUE) %>%
+  mutate(conf.low=.fitted + (-1.96*.se.fit),
+         conf.high=.fitted + (1.96*.se.fit))
+```
+
+
+### Presentation Graph
+The graph below allows us to visualize the isolated effect of 3-pt % on wins. We can clearly see that when all other variables from the model are held constant at their means, an increase in 3-pt % accounts for a substantial increase in wins. This is fascinating! We can see that a team that is average across all stats can still achieve more than 45 wins if they shoot above 38% from three point range. That is enough to make playoffs!
+
+```{r}
+ggplot(predicted_values, aes(x=X3P., y=.fitted)) +
+  geom_ribbon(aes(ymin=conf.low, ymax=conf.high),
+              alpha=0.5,fill="#006BB6") + 
+  geom_line(color="#006BB6", size=1) +
+  labs(x="3-pt %", y="Predicted Wins", 
+       title = "Influence from 3-pt % on Wins") +
+  theme_minimal()+
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+### **Discussion**
+In this study free throw % was determined to be insignificant at influencing wins. This study was based on full game data averaged over a season. It would be interesting to see the influence of free throws in the fourth quarter. In a close game, when it comes to the final minutes of the fourth quarter if a team is up by a point or two and they have possession, they will hold the ball to run out the shot clock (24 seconds), only attempting a shot at the last second so the opposition has less time to score on their possession. In order to make something happen and change possession of the ball the defending team will purposely foul (reach in foul) the other team. This will force the other team to inbound the ball again, until the team who gets fouled is in bonus. Bonus occurs after a team has been fouled four times in a quarter. Bonus can also occur if a team gets fouled twice in the last two minutes of a quarter. Once a team is in bonus (on the fifth foul for the quarter or third in the final two minutes of a quarter) they instantly go to the foul line and shoot two free throws instead of in bounding the ball. This guarantees a possession change, however, allows the team getting fouled a chance at two points. As mentioned, bonus usually occurs in the final quarter of the game and is very common in playoffs. Therefore, when its a close game these free throws can often determine the outcome of the game. Conclusively, in a different study it would be interesting to add another variable such as fourth quarter free throw % or even just free throws made in the fourth quarter and examine its influence on wins. Further this variable might be better looked at in raw observation form rather than a season average. 
+
+There have been several studies done in the past on this topic. Winning basketball games can earn a franchise a lot of money. Therefore it makes sense that people have invested resources into determining how to win more games. A known, comprehensive group of studies were conducted and evaluated in the book *Basketball on Paper: Rules and Tools for Performance Analysis by Dean Oliver*. Several articles have been written about the findings of these studies. For example, the article "What Wins Basketball Games" (Lyons, 2019), summarizes these findings. The studies determined that the most significant statistics in winning games were field goal percentage, turnovers, offensive rebounds and how often a team gets to the foul line. Like these studies we also confirmed that field goal %, turnovers and offensive rebounds were significant in predicting wins. These studied measured the number of times a team went to the foul line. This was not a variable included in our data. However, the opposite to this variable would be personal fouls, which is included in our study and we did find to be significant, with a negative influence on wins. We also found additional variables to be significant which this study did not include, such as 3-pt %, steals, assists, defensive rebounds and blocks. It wasn't that these studies found that these stats were unimportant, they just considered them in a different light. The objective of these studies was to highlight a strategy and therefore the tools a team should focus on for said strategy. For example, they noticed that the most winning teams played a strategy that focused on high field goal %. If they didn't shoot that well from the field they better get a lot of offensive rebounds. They didn't focus on defensive rebounds and instead mentioned preventing the other team from grabbing offensive rebounds. Thus defensive rebounds aren't unimportant.
+
+These studies also mentioned the importance of good offensive players rather than good offensive systems. This evidence has been proven on several occasions. For example, Phil Jackson's triangle system versus playing through Michael Jordan. Obviously, the team had more success when they had MJ. This evidence proved that teams win more when they have all stars, and better yet when they have coaches who know how to build an offense around those all stars. This is a factor we did not discuss. The influence of having all stars on the team. These all stars are likely all stars because they possess desired qualities in the form of stats mentioned in this study. For example, they are usually good shooters. Nevertheless, it would be interesting to see the scale of the affect of having one or more all stars on a roster.
+
+Lastly, the studies in the book *Basketball on Paper: Rules and Tools for Performance Analysis by Dean Oliver* did not mention the importance of 3-pt shooting. This is likely because this book was published in 2004, meaning that all studies were performed prior. Therefore, during a time when the three point shot was not that prominent in basketball. In our study, we confirmed the increased amount of three point shots in a game and decreased amount of two's. Since these studies were prior to the three point era, this is likely why they did not include 3-pt shooting as one of the most important factors. Also, having field goal % included in their most important factors likely covered most of the effect from the few 3-pt shots at the time.
+
+### **Resources**
+
+The data used in this study was gathered from basketball-reference.com. This site has a plethora of different NBA stats and allows you to easily download as a CSV file.
+
+Lyons, T. (2019, July 4). What wins basketball games, a review of "Basketball on paper: Rules and tools for performance analysis" by Dean Oliver. Strauss, Factor, Laing & Lyons. Retrieved March 3, 2022, from https://www.sfandllaw.com/articles/what-wins-basketball-games-a-review-of-basketball-on-paper-rules-and-tools-for-performance-analysis/ 
+
+Schuhmann, J. (2021, October 14). NBA's 3-Point Revolution: How 1 shot is changing the game. NBA.com. Retrieved March 4, 2022, from https://www.nba.com/news/3-point-era-nba-75 
+
+
+
