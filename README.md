@@ -13,5 +13,5 @@ In terms of data cleaning, there were no missing or incomplete values. All the d
 
 ## Data Analytics
 Before carrying out any linear regression I conducted a thorough exploratory data analysis. First I evaluated the distribution of each numeric variable to determine whether it was normally distributed. If a variable is not linear distributed it must be transformed. In this data set all variables were distributed normally, therefore no transformations had to be done. Examples of distributions of two variables:
-![unnamed-chunk-4-1](https://github.com/kaven611/NBA_Regression/assets/156690481/cb16f4db-93e1-4dc1-bf84-1f2295482f1c)
+#### ![unnamed-chunk-4-1](https://github.com/kaven611/NBA_Regression/assets/156690481/cb16f4db-93e1-4dc1-bf84-1f2295482f1c)
 ![unnamed-chunk-6-1](https://github.com/kaven611/NBA_Regression/assets/156690481/85c7f321-b8c0-44f2-a673-2a0f3efe918b)
