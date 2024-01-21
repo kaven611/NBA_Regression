@@ -16,5 +16,8 @@ Before carrying out any linear regression I conducted a thorough exploratory dat
 <img src="final-NBA-project_files/figure-html/unnamed-chunk-6-1.png" alt="Image Description" width="400"/>
 <img src="final-NBA-project_files/figure-html/unnamed-chunk-4-1.png" alt="Image Description" width="400"/>
 
+Next, I examined patterns and correlations between the numeric variables. If any two predictor variables had a correlation greater than +-0.4 they could not be included together in the regression. I also looked at correlations with independent variables and the dependent variable to inform my regression decisions. An example of four scatterplots:
+<img src="final-NBA-project_files/figure-html/unnamed-chunk-20-1.png" alt="Image Description" width="800"/>
 
-
+Correlation Matrix:
+<img src="final-NBA-project_files/figure-html/unnamed-chunk-34-1.png" alt="Image Description" width="800"/>
