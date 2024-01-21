@@ -1,6 +1,6 @@
 # NBA Regression
 ## Summary
-The main purpose of this study was to determine which on-court stats are the most influential to winning basketball games and by doing so, use these variables to make predictions on team performance. Many theories on the matter exist, for example some older theories claim that defense is most influential. Conversely, modern theories claim that 3 point shooting is most important. This study concluded that there is merit to both aforementioned theories and the most influential on court stats are: field goal %, 3 point %, offensive rebounds, defensive rebounds, assists, blocks, steals, turnovers, and personal fouls. The statistical method used was multiple linear regression with the dependent variable being wins and the fit criteria used was the Akaike Information Criterion (AIC). Final regression coefficient output: 
+The main purpose of this study was to determine which on-court stats are the most influential to winning basketball games and by doing so, use these variables to make predictions on team performance. Many theories on the matter exist, for example some older theories claim that defense is most influential (Lyons, 2019). Conversely, modern theories claim that 3 point shooting is most important (Schuhmann, 2021). This study concluded that there is merit to both aforementioned theories and the most influential on court stats are: field goal %, 3 point %, offensive rebounds, defensive rebounds, assists, blocks, steals, turnovers, and personal fouls. The statistical method used was multiple linear regression with the dependent variable being wins and the fit criteria used was the Akaike Information Criterion (AIC). Final regression coefficient output: 
 
 ![image](https://github.com/kaven611/NBA_Regression/assets/156690481/0467a495-80ca-4ee8-b91b-68e17896fc6a)
 
@@ -44,4 +44,9 @@ Finally the model's performance was evaluated by looking at the behaviour of the
 <img src="final-NBA-project_files/figure-html/unnamed-chunk-56-3.png" alt="Image Description" width="700"/>
 
 ## Conclusion
-To conclude, the multiple linear regression was an effective method to both predict wins and test significance of independent variable predictive power. The theories mentioned in the summary were proven to both hold merit. Though we saw in the EDA that 3 point shooting has become more popular over time, other variables are still influence the outcome of the game.
+To conclude, the multiple linear regression was an effective method to both predict wins and test significance of independent variable predictive power. The theories mentioned in the summary were proven to both hold merit. Though we saw in the EDA that 3 point shooting has become more popular over time, other variables still influence the outcome of the game.
+
+## References
+Lyons, T. (2019, July 4). What wins basketball games, a review of “Basketball on paper: Rules and tools for performance analysis” by Dean Oliver. Strauss, Factor, Laing & Lyons. Retrieved March 3, 2022, from https://www.sfandllaw.com/articles/what-wins-basketball-games-a-review-of-basketball-on-paper-rules-and-tools-for-performance-analysis/
+
+Schuhmann, J. (2021, October 14). NBA’s 3-Point Revolution: How 1 shot is changing the game. NBA.com. Retrieved March 4, 2022, from https://www.nba.com/news/3-point-era-nba-75
