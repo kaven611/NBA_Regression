@@ -35,8 +35,8 @@ After completing the EDA I proceeded to conduct multiple linear regression. I ma
 
 Finally the model's performance was evaluated by looking at the behaviour of the residuals. We can see in the below plots the residuals show no signs of heteroskedasticity.
 
-<img src="final-NBA-project_files/figure-html/unnamed-chunk-53-1.png" alt="Image Description" width="400"/>
-<img src="final-NBA-project_files/figure-html/unnamed-chunk-54-1.png" alt="Image Description" width="400"/>
+<img src="final-NBA-project_files/figure-html/unnamed-chunk-53-1.png" alt="Image Description" width="700"/>
+<img src="final-NBA-project_files/figure-html/unnamed-chunk-54-1.png" alt="Image Description" width="700"/>
 
 <img src="final-NBA-project_files/figure-html/unnamed-chunk-56-1.png" alt="Image Description" width="700"/>
 <img src="final-NBA-project_files/figure-html/unnamed-chunk-56-2.png" alt="Image Description" width="700"/>
