@@ -9,15 +9,23 @@ The main purpose of this study was to determine which on-court stats are the mos
  ## Data Preparation
  Since basketball-reference.com posts the data on a per season basis each CSV I downloaded only contained one season. I wanted 15 seasons in order to have a large enough data set to separate it into a train and test set. However, I did not want to include any seasons beyond 20 years old as these may skew the data. For example, many rules have changed over the years, affecting the gameplay and therefore the stats.
 
-In terms of data cleaning, there were no missing or incomplete values. All the data was numeric except for team name and season. Since the season crosses over January the season was a string like "2002-2003". I was not performing any time series analysis, so I left this variable as is.
+In terms of data cleaning, there were no missing or incomplete values. All the data was numeric except for team name.
 
 ## Data Analytics
 Before carrying out any linear regression I conducted a thorough exploratory data analysis. First I evaluated the distribution of each numeric variable to determine whether it was normally distributed. If a variable is not linear distributed it must be transformed. In this data set all variables were distributed normally, therefore no transformations had to be done. Examples of distributions of two variables:
+
 <img src="final-NBA-project_files/figure-html/unnamed-chunk-6-1.png" alt="Image Description" width="400"/>
 <img src="final-NBA-project_files/figure-html/unnamed-chunk-4-1.png" alt="Image Description" width="400"/>
 
 Next, I examined patterns and correlations between the numeric variables. If any two predictor variables had a correlation greater than +-0.4 they could not be included together in the regression. I also looked at correlations with independent variables and the dependent variable to inform my regression decisions. An example of four scatterplots:
+
 <img src="final-NBA-project_files/figure-html/unnamed-chunk-20-1.png" alt="Image Description" width="800"/>
 
 Correlation Matrix:
+
 <img src="final-NBA-project_files/figure-html/unnamed-chunk-34-1.png" alt="Image Description" width="800"/>
+
+I then examined some time series patterns to inform my regression decisions. Evaluating certain variables across the 15 seasons. Two examples:
+
+<img src="final-NBA-project_files/figure-html/unnamed-chunk-35-1.png" alt="Image Description" width="400"/>
+<img src="final-NBA-project_files/figure-html/unnamed-chunk-36-1.png" alt="Image Description" width="400"/>
