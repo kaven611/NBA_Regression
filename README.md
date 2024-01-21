@@ -41,3 +41,6 @@ Finally the model's performance was evaluated by looking at the behaviour of the
 <img src="final-NBA-project_files/figure-html/unnamed-chunk-56-1.png" alt="Image Description" width="700"/>
 <img src="final-NBA-project_files/figure-html/unnamed-chunk-56-2.png" alt="Image Description" width="700"/>
 <img src="final-NBA-project_files/figure-html/unnamed-chunk-56-3.png" alt="Image Description" width="700"/>
+
+## Conclusion
+To conclude, the multiple linear regression was an effective method to both predict wins and test significance of independent variable predictive power. The theories mentioned in the summary were proven to both hold merit. Though we saw in the EDA that 3 point shooting has become more popular over time, other variables are still influence the outcome of the game.
