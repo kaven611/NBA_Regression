@@ -18,15 +18,20 @@ Before carrying out any linear regression I conducted a thorough exploratory dat
 
 Next, I examined patterns and correlations between the numeric variables. If any two predictor variables had a correlation greater than +-0.4 they could not be included together in the regression. I also looked at correlations with independent variables and the dependent variable to inform my regression decisions. An example of four scatterplots:
 
-<img src="final-NBA-project_files/figure-html/unnamed-chunk-20-1.png" alt="Image Description" width="800"/>
+<img src="final-NBA-project_files/figure-html/unnamed-chunk-20-1.png" alt="Image Description" width="700"/>
 
 Correlation Matrix:
 
-<img src="final-NBA-project_files/figure-html/unnamed-chunk-34-1.png" alt="Image Description" width="800"/>
+<img src="final-NBA-project_files/figure-html/unnamed-chunk-34-1.png" alt="Image Description" width="700"/>
 
 I then examined some time series patterns to inform my regression decisions. Evaluating certain variables across the 15 seasons. Two examples:
 
-<img src="final-NBA-project_files/figure-html/unnamed-chunk-35-1.png" alt="Image Description" width="800"/>
-<img src="final-NBA-project_files/figure-html/unnamed-chunk-36-1.png" alt="Image Description" width="800"/>
+<img src="final-NBA-project_files/figure-html/unnamed-chunk-35-1.png" alt="Image Description" width="700"/>
+<img src="final-NBA-project_files/figure-html/unnamed-chunk-36-1.png" alt="Image Description" width="700"/>
+
+After completing the EDA I proceeded to conduct multiple linear regression. I manually performed stepwise backward selection starting with all independent variables and removing ones that were deemed statistically insignificant based on p-values greater than 0.05. Each time I removed variables I evaluated the models fit based on the Akaike Information Criterion (AIC). Subsequently choosing the model with the lowest AIC and therefore best fit. All variables included in the final model had p-values less than 0.05 except for 2: assists and personal fouls. Though these variables had p-values outside of the typical significance range of 0.05 the AIC was lower with them included. Plot of the model predictions:
+
+<img src="final-NBA-project_files/figure-html/unnamed-chunk-50-1.png" alt="Image Description" width="700"/>
+
 
 
