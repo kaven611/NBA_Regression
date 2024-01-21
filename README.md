@@ -12,8 +12,7 @@ The main purpose of this study was to determine which on-court stats are the mos
 In terms of data cleaning, there were no missing or incomplete values. All the data was numeric except for team name.
 
 ## Data Analytics
-Before carrying out any linear regression I conducted a thorough exploratory data analysis. First I evaluated the distribution of each numeric variable to determine whether it was normally distributed. If a variable is not linear distributed it must be transformed. In this data set all variables were distributed normally, therefore no transformations had to be done. Examples of distributions of two variables:
-
+Before carrying out any linear regression I conducted a thorough exploratory data analysis (EDA). First I evaluated the distribution of each numeric variable to determine whether it was normally distributed. If a variable is not linear distributed it must be transformed. In this data set all variables were distributed normally, therefore no transformations had to be done. Examples of distributions of two variables:
 <img src="final-NBA-project_files/figure-html/unnamed-chunk-6-1.png" alt="Image Description" width="400"/>
 <img src="final-NBA-project_files/figure-html/unnamed-chunk-4-1.png" alt="Image Description" width="400"/>
 
@@ -27,5 +26,7 @@ Correlation Matrix:
 
 I then examined some time series patterns to inform my regression decisions. Evaluating certain variables across the 15 seasons. Two examples:
 
-<img src="final-NBA-project_files/figure-html/unnamed-chunk-35-1.png" alt="Image Description" width="400"/>
-<img src="final-NBA-project_files/figure-html/unnamed-chunk-36-1.png" alt="Image Description" width="400"/>
+<img src="final-NBA-project_files/figure-html/unnamed-chunk-35-1.png" alt="Image Description" width="800"/>
+<img src="final-NBA-project_files/figure-html/unnamed-chunk-36-1.png" alt="Image Description" width="800"/>
+
+
